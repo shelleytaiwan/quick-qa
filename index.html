@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>快速問答</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@700;900&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#EFE9DF; --card:#F8F4EC; --ink:#2B1D1A; --muted:#8C7B70; --line:#D6CCBD; --hl:#9A3F22;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:inherit;margin:0;padding:0}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  min-height:100%;display:flex;flex-direction:column;
+  background:var(--bg);color:var(--ink);font-size:18px;
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Hiragino Sans",sans-serif;
+  overflow-x:hidden;
+}
+#app{width:100%;max-width:950px;margin:0 auto;padding:0 20px;flex:1;display:flex;flex-direction:column}
+.top{position:relative;text-align:center;padding:30px 0 26px}
+.home{
+  position:absolute;left:0;top:50%;transform:translateY(-50%);
+  color:var(--ink);text-decoration:none;font-size:15px;font-weight:500;
+  border:1px solid var(--line);background:var(--card);padding:8px 12px;border-radius:2px;
+  transition:transform .15s,box-shadow .15s,border-color .15s;
+}
+.home:hover{border-color:var(--ink);transform:translate(-2px,-2px);box-shadow:2px 2px 0 var(--ink)}
+.top h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp(26px,4vw,40px);letter-spacing:.1em;line-height:1.3}
+
+button{font-family:inherit;cursor:pointer;border-radius:2px;transition:transform .15s,box-shadow .15s,border-color .15s,background .15s}
+button:hover:not(:disabled){transform:translate(-2px,-2px);box-shadow:2px 2px 0 var(--ink)}
+button:focus-visible,a:focus-visible,textarea:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px}
+.tabs button{
+  font-family:"Noto Serif TC",serif;font-weight:700;font-size:clamp(18px,2.4vw,24px);letter-spacing:.08em;
+  padding:16px 8px;border:1px solid var(--line);background:var(--card);color:var(--ink);
+}
+.tabs button:hover{border-color:var(--ink)}
+.tabs button.active{background:var(--ink);color:var(--card);border-color:var(--ink)}
+
+.panel{display:none;flex-direction:column;gap:18px}
+.panel.show{display:flex}
+
+.btn{font-weight:700;font-size:clamp(17px,2.1vw,22px);padding:14px 20px;border:1px solid var(--ink);letter-spacing:.06em}
+.btn-solid{background:var(--ink);color:var(--card)}
+.btn-ghost{background:var(--card);color:var(--ink)}
+.btn-row{display:flex;gap:12px}
+.btn-row .btn{flex:1}
+
+/* 聽題目 */
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.seg button{font-weight:500;font-size:clamp(16px,1.9vw,19px);padding:11px 6px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.seg button:hover{border-color:var(--ink)}
+.seg button.active{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.bar{height:4px;background:var(--line)}
+.bar i{display:block;height:100%;width:0;background:var(--hl);transition:width .3s}
+.flip{perspective:1200px;height:clamp(260px,38vh,380px)}
+.flip-in{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .5s}
+.flip-in.flipped{transform:rotateY(180deg)}
+.face{
+  position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  padding:clamp(20px,3vw,36px);background:var(--card);border:1px solid var(--line);border-radius:2px;text-align:center;
+}
+.face.back{transform:rotateY(180deg)}
+.face .no{font-family:"Noto Serif TC",serif;font-weight:700;font-size:clamp(17px,2vw,22px);letter-spacing:.2em;color:var(--hl)}
+.face .q{font-family:'KaiTi','DFKai-SB','BiauKai','Noto Serif TC',serif;font-weight:700;font-size:clamp(28px,4.2vw,46px);line-height:1.6}
+.face .hint{font-family:"Noto Serif TC",serif;font-weight:900;font-size:clamp(28px,4.2vw,46px);letter-spacing:.2em}
+.face.front.playing .hint{color:var(--hl)}
+.count{text-align:center;color:var(--muted);letter-spacing:.2em;font-size:clamp(16px,1.9vw,20px)}
+
+/* AI 陪練 */
+.lead{text-align:center;font-size:clamp(18px,2.2vw,22px);line-height:1.8}
+.lead b{color:var(--hl)}
+.levels{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.levels button{
+  font-family:"Noto Serif TC",serif;font-weight:700;font-size:clamp(22px,3vw,30px);line-height:1.4;
+  padding:22px 10px;border:1px solid var(--line);background:var(--card);color:var(--ink);
+}
+.levels button span{display:block;font-family:"Noto Sans TC",sans-serif;font-weight:400;font-size:15px;color:var(--muted);margin-top:4px;letter-spacing:.06em}
+.levels button:hover{border-color:var(--ink)}
+.levels button.active{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.levels button.active span{color:var(--line)}
+textarea{
+  width:100%;min-height:220px;resize:vertical;padding:18px 20px;
+  font-family:inherit;font-size:clamp(16px,1.9vw,19px);line-height:1.85;color:var(--ink);
+  background:var(--card);border:1px solid var(--line);border-radius:2px;
+}
+textarea:focus{border-color:var(--ink)}
+.tip{text-align:center;min-height:28px;font-size:clamp(15px,1.8vw,18px);color:var(--ink);line-height:1.7}
+.tip.err{color:var(--hl)}
+.steps{max-width:600px;margin:0 auto;padding-left:26px;font-size:clamp(16px,1.9vw,18px);line-height:2;color:var(--muted)}
+
+footer{text-align:center;padding:26px 20px 32px;font-size:12px;letter-spacing:.06em;color:var(--muted)}
+
+@media(max-width:640px){
+  #app{padding:0 14px}
+  .top{padding:16px 0 18px}
+  .home{position:static;transform:none;display:inline-block;margin-bottom:12px;font-size:14px}
+  .btn-row{flex-direction:column}
+  .levels{grid-template-columns:1fr}
+  .flip{height:300px}
+}
+@media(prefers-reduced-motion:reduce){button,.home,.flip-in,.bar i{transition:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <a class="home" href="https://shelleytaiwan.github.io/review-for-NP/">← 返回主頁</a>
+    <h1>快速問答</h1>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button id="tab-listen" class="active" role="tab" onclick="showTab('listen')">聽題目</button>
+    <button id="tab-ai" role="tab" onclick="showTab('ai')">AI 陪練</button>
+  </div>
+
+  <!-- 模塊一：聽題目 -->
+  <section id="panel-listen" class="panel show">
+    <div class="seg" id="seg">
+      <button data-speed="slow">慢速</button>
+      <button data-speed="normal" class="active">標準</button>
+      <button data-speed="fast">自然快速</button>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="flip">
+      <div class="flip-in" id="flip">
+        <div class="face front" id="front"><div class="hint">請聽問題</div></div>
+        <div class="face back"><div class="no" id="qno">第 1 題</div><div class="q" id="qtext"></div></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-solid" onclick="playQ()">聽問題</button>
+      <button class="btn btn-ghost" onclick="flipQ()">看題目</button>
+      <button class="btn btn-solid" onclick="nextQ()">下一題</button>
+    </div>
+    <div class="count" id="count"></div>
+  </section>
+
+  <!-- 模塊二：AI 陪練 -->
+  <section id="panel-ai" class="panel">
+    <p class="lead">選擇程度，開始用「<b>說</b>」的跟 ChatGPT 老師練習對話</p>
+    <div class="levels">
+      <button id="lv-beginner" onclick="pickLevel('beginner')">初級<span>題庫問答・HSK 1–3</span></button>
+      <button id="lv-inter" onclick="pickLevel('inter')">中級<span>自由對話・HSK 1–6</span></button>
+    </div>
+    <textarea id="prompt-box" placeholder="先選上面的程度，這裡會出現對話設定。&#10;你也可以在這裡加上想聊的主題或單字（keyword），例如：我想聊旅行。"></textarea>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="copyPrompt()">複製設定</button>
+      <button class="btn btn-solid" onclick="openChat()">開啟 ChatGPT</button>
+    </div>
+    <div class="tip" id="tip"></div>
+    <ol class="steps">
+      <li>選「初級」或「中級」</li>
+      <li>按「開啟 ChatGPT」</li>
+      <li>若沒有自動帶入設定，貼上（已複製）後送出</li>
+      <li>點 ChatGPT 的語音模式，用說的跟 AI 老師對話</li>
+    </ol>
+  </section>
+</div>
+<footer>Shelleytaiwan 製作 · 2027 · 請勿商用</footer>
+
+<script>
+/* ===== 題庫 ===== */
+const QUESTIONS = [
+  "您貴姓？","你叫什麼名字？","您怎麼稱呼？","你是做什麼的？",
+  "我說「請！」，你說什麼？","我說「對不起！」，你說？","我說「辛苦了！」，你說？",
+  "我說「不好意思！」，你說？","我說「麻煩你了！」，你說？",
+  "你帶禮物給朋友的時候要說？","我說「這是一點小意思！」，你說？",
+  "我說「來！別客氣！」，你說？","想知道怎麼叫對方的時候說？",
+  "你有過敏嗎？對什麼過敏？","你喜歡吃哪一種拉麵？","你最愛吃的食物是什麼？",
+  "你有不吃的東西嗎？","你喜歡喝咖啡還是茶？","你喜不喜歡旅行？為什麼？",
+  "你喜歡看電視還是看電影？","我不喜歡跑步，你呢？","我是台灣人，你也是台灣人嗎？",
+  "你上星期考試考得怎麼樣？","你去過美國嗎？","今天天氣怎麼樣？",
+  "請說你的電話號碼。","明天會下雨嗎？","昨天風大嗎？",
+  "你來自日本哪裡？那裡什麼有名？","我是台灣新竹人，你是？",
+  "Shelley老師住在日本哪裡？","張老師是台灣哪裡人？","你去過台灣嗎？",
+  "你爬過富士山嗎？","拼音難嗎？","來不及去學校上課了，怎麼辦？",
+  "請問車站怎麼走？","這是什麼？","你上週末做了什麼事？",
+  "你平常做運動嗎？什麼運動？","考完試你想做什麼？","你覺得埼玉怎麼樣？",
+  "這個月累不累？","你想吃台灣的什麼小吃？","這裡住得舒服嗎？",
+  "你為什麼想去台灣？","你吃早餐了嗎？吃什麼？","這個字怎麼讀？",
+  "橘子的日文怎麼說？","你最近想買什麼東西？","你怎麼吃納豆？",
+  "你有沒有電腦？幾台？","下星期你想做什麼？","這個月的中文課，你最喜歡什麼課堂活動？",
+  "這叫什麼？","這件衣服怎麼樣？","你們什麼時候要去台灣？",
+  "富士山高還是台灣的玉山高？","你們明年什麼時候回日本？","你平常怎麼練習中文？",
+  "你的中文很好，你學多久了？","我想學好日文，應該怎麼做？",
+  "我想去你那裡玩，從東京要怎麼去？","這是你的嗎？這是誰的？",
+  "你的包包是在哪裡買的？","日本的富士蘋果一個多少錢？","富士山有多高？",
+  "你今天幾點下課？下午有空嗎？","你會做什麼日本料理？","今天熱還是昨天熱？",
+  "你喜歡哪一件？為什麼？","你昨天晚上吃什麼？","你在哪裡教日文？",
+  "你會不會開車？","你喜歡夏天還是冬天？為什麼？",
+  "某個詞的日文是什麼？可以麻煩你寫給我嗎？","你會說幾國語言？",
+  "從埼玉車站怎麼到這裡？","請問廁所在哪裡？","你的書法寫得怎麼樣？",
+  "請跟我念。","可以借我筆嗎？","可以麻煩你幫我拿那本書嗎？",
+  "可以幫我在白板上寫下你的名字嗎？","不好意思，可以請你幫我拍照嗎？",
+  "從日本到台灣要多久？","日本的暑假是從什麼時候到什麼時候？",
+  "你覺得這次考試你會及格嗎？","日本的捷運上可以吃東西嗎？","日本比台灣冷嗎？",
+  "誰唱歌唱得最好？","手機和電腦，哪一個貴？","你最喜歡的日本文化是什麼？",
+  "台灣寒假放多久？日本有寒假嗎？","明天要上課嗎？這週末呢？","這週末你要做什麼？",
+  "你家附近有什麼？","日本學校的暑假比台灣長還是短？",
+  "你吃午餐了嗎？今天你想吃什麼？","我想去你的城市玩，我可以去哪裡、做什麼？",
+  "你喜歡上網課嗎？為什麼？","聽說讀寫，你覺得哪一個最難？",
+  "你可以幫我叫下一位同學過來嗎？","如果發票中獎，你要做什麼？",
+  "你做飯做得怎麼樣？","你會穿和服嗎？","老師今天穿什麼？",
+  "英文和中文，哪一個比較好學？","現在可以先做某件事嗎？（教室指令）",
+  "你昨天晚上睡得好嗎？","你的手機是什麼時候買的？","你的生日是幾月幾號？",
+  "說說他的穿戴特徵。穿著～戴著～","你有Line嗎？","現在幾點？",
+  "今天幾月幾號星期幾？","報警要打幾號？","發生火災要打幾號？",
+  "有性騷擾怎麼辦？","你遇過緊急情況嗎？發生什麼事？"
+];
+
+/* ===== 分頁 ===== */
+function showTab(t){
+  stopSpeak();
+  ['listen','ai'].forEach(k=>{
+    document.getElementById('tab-'+k).classList.toggle('active',k===t);
+    document.getElementById('panel-'+k).classList.toggle('show',k===t);
+  });
+}
+
+/* ===== 模塊一：聽題目 ===== */
+let idx=0, flipped=false, speed='normal', speaking=false;
+let currentUtterance=null;
+
+// ----- 語音引擎：沿用原「快速問答」設定（男聲：慢速/標準；女聲：自然快速）-----
+let cachedVoices = [];
+let preferredMaleVoice = null;
+let preferredFemaleFast = null;
+
+function initVoicePreferences() {
+  if(!window.speechSynthesis) return;
+  function refreshVoices() {
+    const voices = window.speechSynthesis.getVoices();
+    if(!voices.length) return;
+    cachedVoices = voices;
+    preferredMaleVoice = voices.find(v => {
+      const name = v.name.toLowerCase();
+      const lang = v.lang.toLowerCase();
+      return (lang === 'zh-tw' && (name.includes('google') || name.includes('男') || name.includes('male'))) ||
+             (lang === 'zh-cn' && (name.includes('male') || name.includes('男生'))) ||
+             (name === 'Google 國語（台灣）') ||
+             (name === 'Google 普通话（中国大陆）') ||
+             (name.includes('chinese') && name.includes('male'));
+    });
+    if(!preferredMaleVoice) {
+      preferredMaleVoice = voices.find(v => {
+        const lang = v.lang.toLowerCase();
+        const name = v.name.toLowerCase();
+        if((lang === 'zh-tw' || lang === 'zh-cn') &&
+           !name.includes('meijia') && !name.includes('美佳') && !name.includes('tingting') &&
+           !name.includes('yating') && !name.includes('female')) return true;
+        return false;
+      });
+    }
+    if(!preferredMaleVoice) preferredMaleVoice = voices.find(v => v.lang.startsWith('zh'));
+    preferredFemaleFast = voices.find(v => {
+      const name = v.name.toLowerCase();
+      const lang = v.lang.toLowerCase();
+      return name.includes('meijia') || name.includes('美佳') || name.includes('tingting') ||
+             name.includes('yating') || (lang === 'zh-tw' && name.includes('female'));
+    });
+    if(!preferredFemaleFast) preferredFemaleFast = voices.find(v => v.lang.toLowerCase() === 'zh-tw' && v.name.includes('Google'));
+    if(!preferredFemaleFast) preferredFemaleFast = voices.find(v => v.lang.startsWith('zh'));
+  }
+  if(window.speechSynthesis.getVoices().length) {
+    refreshVoices();
+  } else {
+    window.speechSynthesis.onvoiceschanged = () => {
+      refreshVoices();
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }
+}
+
+function normalizeTextForSpeech(text) {
+  let fixed = text;
+  fixed = fixed.replace(/面/g, '麵').replace(/還書/g, '環書').replace(/背著/g, '揹著')
+               .replace(/為什麼/g, '為什麼').replace(/富士山/g, '富士山');
+  return fixed;
+}
+
+function speakStable(originalText, speedMode) {
+  if (!('speechSynthesis' in window)) return Promise.reject("no synth");
+  return new Promise((resolve, reject) => {
+    window.speechSynthesis.cancel();
+    if(currentUtterance) {
+      try { currentUtterance.onend = null; currentUtterance.onerror = null; } catch(e) {}
+      currentUtterance = null;
+    }
+    const text = normalizeTextForSpeech(originalText);
+    const utterance = new SpeechSynthesisUtterance(text);
+    let rateValue = 0.9, pitchValue = 1.0;
+    let targetVoice = null;
+    if(speedMode === 'slow') { rateValue = 0.55; pitchValue = 0.9; targetVoice = preferredMaleVoice; }
+    else if(speedMode === 'normal') { rateValue = 0.85; pitchValue = 1.0; targetVoice = preferredMaleVoice; }
+    else { rateValue = 1.38; pitchValue = 1.08; targetVoice = preferredFemaleFast; }
+    utterance.rate = rateValue;
+    utterance.pitch = pitchValue;
+    utterance.lang = 'zh-TW';
+    if(targetVoice && targetVoice.voiceURI) {
+      utterance.voice = targetVoice;
+      utterance.lang = targetVoice.lang;
+    } else {
+      const fallback = cachedVoices.find(v => v.lang.startsWith('zh'));
+      if(fallback) utterance.voice = fallback;
+    }
+    utterance.onend = () => { currentUtterance = null; resolve(); };
+    utterance.onerror = (err) => { currentUtterance = null; reject(err); };
+    currentUtterance = utterance;
+    window.speechSynthesis.speak(utterance);
+  });
+}
+
+function stopSpeak(){
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  if(currentUtterance){ try{ currentUtterance.onend=null; }catch(e){} currentUtterance=null; }
+  speaking=false;
+  document.getElementById('front').classList.remove('playing');
+}
+
+async function playQ(){
+  if(speaking){ stopSpeak(); return; }
+  const text=QUESTIONS[idx];
+  if(!text) return;
+  speaking=true;
+  document.getElementById('front').classList.add('playing');
+  try{ await speakStable(text, speed); }catch(e){ console.warn(e); }
+  finally{
+    speaking=false;
+    document.getElementById('front').classList.remove('playing');
+  }
+}
+function flipQ(){
+  flipped=!flipped;
+  document.getElementById('flip').classList.toggle('flipped',flipped);
+}
+function nextQ(){
+  stopSpeak();
+  idx=(idx+1)%QUESTIONS.length;
+  flipped=false;
+  document.getElementById('flip').classList.remove('flipped');
+  render();
+  try{localStorage.setItem('quickQaIndex',idx)}catch(e){}
+}
+function render(){
+  document.getElementById('qno').textContent='第 '+(idx+1)+' 題';
+  document.getElementById('qtext').textContent=QUESTIONS[idx];
+  document.getElementById('count').textContent=(idx+1)+' / '+QUESTIONS.length;
+  document.getElementById('bar').style.width=((idx+1)/QUESTIONS.length*100)+'%';
+}
+document.querySelectorAll('#seg button').forEach(b=>{
+  b.onclick=()=>{
+    speed=b.dataset.speed;stopSpeak();
+    document.querySelectorAll('#seg button').forEach(x=>x.classList.toggle('active',x===b));
+  };
+});
+try{
+  const s=parseInt(localStorage.getItem('quickQaIndex'),10);
+  if(!isNaN(s)&&s>=0&&s<QUESTIONS.length) idx=s;
+}catch(e){}
+initVoicePreferences();
+setTimeout(initVoicePreferences,100);
+render();
+
+/* ===== 模塊二：AI 陪練 ===== */
+const BANK = QUESTIONS.map((q,i)=>(i+1)+'. '+q).join('\n');
+
+const PROMPTS = {
+  beginner:
+'你是有耐心的華語老師，現在要用「說」的方式陪我做口說練習。我是零起點或初級學生。\n\n' +
+'【開場】你的第一句話一定要說：「你好，請問你怎麼稱呼？」等我回答名字之後，整場對話都用我說的那個名字叫我。\n\n' +
+'【語言規則】\n' +
+'1. 只用 HSK 1～3 級的詞彙，放慢語速，每句盡量短（五個字以內最好）。\n' +
+'2. 我的發音和聲調會出錯，請不要糾正每個錯誤，只要聽懂、用簡單的話回我。\n' +
+'3. 如果我卡住，請在打字區打出 keywords 幫我；除非我說「日本語」，否則不要翻譯日文。\n' +
+'4. 請務必全程只用正體中文（繁體字）回覆，絕對不要出現簡體字。\n\n' +
+'【練習方式】下面是考試會考的題庫，共 ' + QUESTIONS.length + ' 題。請你：\n' +
+'1. 一次只問一題，等我回答完再問下一題，不用照順序。\n' +
+'2. 先觀察我的程度，從簡單的題目開始問，再慢慢問到比較難的。\n' +
+'3. 盡量把所有題目都問到，並自己記住哪些問過了，不要重複。\n' +
+'4. 題庫中「我說……，你說？」這類題目，請你扮演說話的人，真的說出那句話，讓我回應。\n' +
+'5. 題庫中需要看圖、看實物或寫字的題目（例如穿戴特徵、寫在白板上），請改成可以只用說完成的版本。\n' +
+'6. 如果題庫都問完了，或你覺得對我太簡單，可以根據我的回答延伸問題，例如我說了自己的興趣愛好，就從那裡繼續問；但基本上以題庫為主。\n\n' +
+'【題庫】\n' + BANK,
+
+  inter:
+'你是有耐心的華語老師，現在要用「說」的方式跟我自由對話。我是中級以上的學生。\n\n' +
+'【開場】你的第一句話一定要說：「你好，請問你怎麼稱呼？」等我回答名字之後，整場對話都用我說的那個名字叫我，然後再自然地聊下去。\n\n' +
+'【語言規則】\n' +
+'1. 只用 HSK 1～6 級的詞彙和語法對話。\n' +
+'2. 如果我卡住，請在打字區打出 keywords 幫我；除非我說「日本語」，否則不要翻譯日文。\n' +
+'3. 請務必全程只用正體中文（繁體字）回覆，絕對不要出現簡體字。\n\n' +
+'【對話方式】這是自由對話，不是一問一答的考試。請：\n' +
+'1. 一次只說一兩句話，多追問「為什麼」「後來呢」「你覺得呢」，讓我多說。\n' +
+'2. 可以參考下面的題庫話題（自我介紹、飲食、旅行、天氣、考試、日本與台灣的比較、問路、請求幫忙、緊急情況等），但要比題庫更深入：請我說原因、舉例子、比較、表達看法，或用「如果……」的假設問題。\n' +
+'3. 注意我的句子是否完整、自然；遇到明顯的錯誤，在我說完後用自然的方式重說一次正確的說法，不要打斷我。\n' +
+'4. 根據我的回答延伸話題，例如我提到興趣、工作或家鄉，就從那裡深入聊。\n\n' +
+'【參考話題（題庫）】\n' + BANK
+};
+
+let level=null;
+const box=document.getElementById('prompt-box');
+const tip=document.getElementById('tip');
+
+function pickLevel(lv){
+  level=lv;
+  box.value=PROMPTS[lv];
+  document.getElementById('lv-beginner').classList.toggle('active',lv==='beginner');
+  document.getElementById('lv-inter').classList.toggle('active',lv==='inter');
+  tip.className='tip';tip.textContent='';
+}
+function tryCopy(text){
+  let ok=false;
+  try{box.focus();box.select();box.setSelectionRange(0,999999);ok=document.execCommand('copy');}catch(e){}
+  try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text);ok=true;}}catch(e){}
+  return ok;
+}
+function needLevel(){
+  if(box.value.trim()) return false;
+  tip.className='tip err';tip.textContent='請先選擇「初級」或「中級」';
+  return true;
+}
+function copyPrompt(){
+  if(needLevel()) return;
+  tryCopy(box.value);
+  tip.className='tip';
+  tip.textContent='已複製設定，貼到 AI 對話頁送出即可';
+}
+function openChat(){
+  if(needLevel()) return;
+  tryCopy(box.value);
+  const q=encodeURIComponent(box.value);
+  tip.className='tip';
+  if(q.length<=6000){
+    window.open('https://chatgpt.com/?q='+q,'_blank','noopener');
+    tip.textContent='已開啟 ChatGPT。若沒有自動帶入，請貼上（已複製）後送出，再開語音模式用說的聊天。';
+  }else{
+    window.open('https://chatgpt.com/','_blank','noopener');
+    tip.textContent='已開啟 ChatGPT。設定內容較長，已複製，請在對話框貼上後送出，再開語音模式用說的聊天。';
+  }
+}
+</script>
+</body>
+</html>
